@@ -9,7 +9,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Navigate into CRM app folder
-cd /Users/alirahi/Desktop/Files/python/crm/crm-app
+cd path to your app /crm-app
 
 # Run the CRM using your Python environment
 python3 crm.py
