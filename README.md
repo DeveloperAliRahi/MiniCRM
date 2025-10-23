@@ -48,30 +48,26 @@ It’s designed for freelancers, consultants, and small businesses who want an e
    ```bash
    git clone https://github.com/DeveloperAliRahi/MiniCRM.git
    cd MiniCRM
-Install dependencies:
+2. Install dependencies:
+    ```bash
+    pip install tk tkcalendar
 
-bash
-Copy code
-pip install tk tkcalendar
-Run the app:
-
-bash
-Copy code
-python3 crm.py
-💡 Mac users: You can also double-click the crm.command file to launch the app instantly.
-
-🧩 File Structure
-bash
-Copy code
-MiniCRM/
-├── crm.py             # Main entry point
-├── db.py              # Database setup and functions
-├── gui.py             # User interface (Tkinter)
-├── utils.py           # Helper functions
-├── crm.command        # Mac executable launcher
-├── requirements.txt   # Dependencies
-└── README.md
+2. Run the app:
+     ```bash
+     python3 crm.py
+3. File Structure:
+      ```bash
+      MiniCRM/
+      ├── crm.py             # Main entry point
+      ├── db.py              # Database setup and functions
+      ├── gui.py             # User interface (Tkinter)
+      ├── utils.py           # Helper functions
+      ├── crm.command        # Mac executable launcher
+      ├── requirements.txt   # Dependencies
+      └── README.md
+   
 🧠 Future Enhancements
+
 Email template management tab
 
 CSV import/export for contact lists
@@ -82,10 +78,15 @@ Follow-up reminders and notifications
 
 Cloud sync (optional future module)
 
+💡 Mac users: You can also double-click the crm.command file to launch the app instantly.
+
 🪪 License
+
 This project is licensed under the MIT License.
 
 👨‍💻 Author
+
 Ali Rahi
 developer@alirahi.com
+
 https://alirahi.com
