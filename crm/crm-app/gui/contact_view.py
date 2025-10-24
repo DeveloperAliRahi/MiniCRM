@@ -2,8 +2,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
+
 from db import get_all_contacts, get_contact_by_id, insert_contact, update_contact, delete_contact, now_str
-from gui.common import style_tk_widget, choose_template_dialog
+from gui.common import style_tk_widget, apply_tree_row_striping, choose_template_dialog
 from utils import open_email_mac_mail, confirm_delete
 
 class ContactView(tk.Frame):
@@ -15,7 +16,6 @@ class ContactView(tk.Frame):
         self.selected_contact_id = tk.StringVar()
 
         self._build_ui()
-        self.refresh_templates()
         self.load_contacts()
 
     def _build_ui(self):
@@ -76,6 +76,7 @@ class ContactView(tk.Frame):
         # Table
         columns = ("ID","Name","Email","Phone","Website","Status","Date Added","Date Called","Date Emailed","Action")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=14)
+
         widths = {"ID": 60, "Name":180, "Email":220, "Phone":120, "Website":160, "Status":140, "Date Added":140, "Date Called":120, "Date Emailed":120, "Action":100}
         for col in columns:
             self.tree.heading(col, text=col)
@@ -86,7 +87,11 @@ class ContactView(tk.Frame):
         vsb.pack(side="right", fill="y")
         self.tree.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.tree.bind("<ButtonRelease-1>", self.on_tree_click)
+        # Bind: selection changes and mouse clicks
+        # <<TreeviewSelect>> fires when selection changes — use this to populate the form
+        self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
+        # Bind mouse release to capture clicks inside the Action column only
+        self.tree.bind("<ButtonRelease-1>", self.on_tree_click_for_action)
 
     # ---- methods ----
     def _update_date_visibility(self, event=None):
@@ -107,11 +112,8 @@ class ContactView(tk.Frame):
         rows = get_all_contacts(self.cursor)
         for r in rows:
             self.tree.insert("", "end", values=r)
-
-    def refresh_templates(self):
-        # placeholder: template changes don't require automatic tree refresh,
-        # but keep method to satisfy external callers
-        pass
+        # Add alternating row colors for readability
+        apply_tree_row_striping(self.tree, even_bg="#FFFFFF", odd_bg="#F3F3F3")
 
     def clear_form(self):
         self.selected_contact_id.set("")
@@ -121,6 +123,7 @@ class ContactView(tk.Frame):
         self.notes_text.delete("1.0", tk.END)
         self.date_called_label.grid_forget(); self.date_called_entry.grid_forget()
         self.date_emailed_label.grid_forget(); self.date_emailed_entry.grid_forget()
+        # Deselect any selected row
         for item in self.tree.selection():
             self.tree.selection_remove(item)
 
@@ -156,28 +159,23 @@ class ContactView(tk.Frame):
             self.load_contacts()
             self.clear_form()
 
-    def on_tree_click(self, event):
-        item = self.tree.identify_row(event.y)
-        col = self.tree.identify_column(event.x)
-        if not item:
+    # Called when selection changes (stable; single-click selects and triggers this)
+    def on_tree_select(self, event):
+        sel = self.tree.selection()
+        if not sel:
+            # Nothing selected
+            self.clear_form()
             return
+        item = sel[0]
         values = self.tree.item(item, "values")
         if not values:
             return
         cid = values[0]
-        if col == "#10":
-            self.open_action(cid)
-            return
-        # toggle selection/deselect
-        current_sel = self.tree.selection()
-        if current_sel and current_sel[0] == item:
-            self.tree.selection_remove(item)
-            self.clear_form()
-            return
-        self.tree.selection_set(item)
+        # populate form
         self.selected_contact_id.set(cid)
         rec = get_contact_by_id(self.cursor, cid)
         if rec:
+            # rec: name, email, phone, website, status, notes, date_added, date_called, date_emailed
             self.name_entry.delete(0, tk.END); self.name_entry.insert(0, rec[0] or "")
             self.email_entry.delete(0, tk.END); self.email_entry.insert(0, rec[1] or "")
             self.phone_entry.delete(0, tk.END); self.phone_entry.insert(0, rec[2] or "")
@@ -191,6 +189,22 @@ class ContactView(tk.Frame):
             if rec[8]:
                 try: self.date_emailed_entry.set_date(rec[8])
                 except Exception: pass
+
+    # Handle mouse clicks to detect Action column clicks only
+    def on_tree_click_for_action(self, event):
+        # get item and column under the mouse
+        item = self.tree.identify_row(event.y)
+        col = self.tree.identify_column(event.x)
+        if not item:
+            return
+        # Action column is last column (10th) -> "#10"
+        if col == "#10":
+            values = self.tree.item(item, "values")
+            if not values:
+                return
+            cid = values[0]
+            self.open_action(cid)
+        # else: do nothing here — selection change will be handled by <<TreeviewSelect>>
 
     def open_action(self, cid):
         rec = get_contact_by_id(self.cursor, cid)
@@ -208,3 +222,14 @@ class ContactView(tk.Frame):
         subject = (subject or "").replace("{{name}}", name or "")
         body = (body or "").replace("{{name}}", name or "")
         open_email_mac_mail(email, subject, body)
+
+    # Method called by TemplateView when templates change; keep it safe and minimal
+    def refresh_templates(self):
+        """
+        Called by the TemplateView when templates are added/updated/deleted.
+        Right now we don't need to change the contact list when templates change,
+        but this method exists so the app won't crash and provides a hook for future behavior.
+        """
+        # For now, do nothing. If you want to reload contacts or update some UI,
+        # implement that logic here. Example: self.load_contacts()
+        return
